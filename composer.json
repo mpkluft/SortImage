@@ -1,0 +1,15 @@
+{
+    "name": "mpkluft/sort-image",
+    "description": "Automating the image sorting process",
+    "license": "",
+    "authors": [
+        {
+            "name": "Komar Alex",
+            "email": "mpkluft@yandex.ru"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "khanamiryan/qrcode-detector-decoder": "dev-master"
+    }
+}
