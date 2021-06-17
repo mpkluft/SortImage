@@ -25,8 +25,6 @@ Class ScanImage {
 		$this->getCoordinate();
 		//Добавить разрезание фото
 
-		echo 'Сканируем'. $this->file . '<br>';
-
 		$qrcode = new \Zxing\QrReader( $this->file );
     return $qrcode->text();
 	}

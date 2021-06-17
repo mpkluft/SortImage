@@ -4,49 +4,43 @@ namespace sort;
 Class Sort {
 
 	private static $instances = [];
-	private $folder = [];
+	private static $dirNotSort;
+	private static $dirSort;
 
-	/**
-  * Конструктор скрыт
-  */
 	protected function __construct() {}
 
-	/**
-  * Запрет на клонирование
-  */
 	protected function __clone() {}
 
-	/**
-  * Sort не должен быть восстанавливаемым из строк.
-  */
   public function __wakeup()
   {
     throw new \Exception("Cannot unserialize a сlass Sort");
   }
 
-  public function showPath()
+ 	public function getDirNotSort()
  	{
- 		print_r($this->folder); 
+ 		return (self::$dirNotSort); 
  	}
 
- 	public function getFolder()
+ 	public function getDirSort()
  	{
- 		return ($this->folder); 
+ 		return (self::$dirSort); 
  	}
 
-	/**
-  * Позволяется создавать не более одного объекта каждого подксласса
-  */
-	public static function getInstance(string $pathF): Sort
+ 	private static function setFolders()
+ 	{
+ 		//На боевой взять папку из конфига
+ 		self::$dirNotSort = 'photo';
+ 		self::$dirSort = 'root';
+ 	}
+
+	public static function getInstance(): Sort
 	{
 		$cls = static::class;
 		if (!isset(self::$instances[$cls]))
 		{
 			self::$instances[$cls] = new static();
-			echo '<br> создали объект <br>';
+			self::setFolders();
 		}
-		//Нужно предусмотреть, чтобы отсутствовали дубли
-		self::$instances[$cls]->folder[] = $pathF;
 
 		return self::$instances[$cls];
 	}

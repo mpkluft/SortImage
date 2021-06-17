@@ -4,7 +4,7 @@ namespace sort;
 require __DIR__ . "/vendor/autoload.php";
 /**
 * Класс Sort , который обеспечивает создание только по одному эксземпляру
-* объектов каждого подкасса
+* объектов каждого подкасса сортировщика
 */
 require_once('Sort.php');
 /**
@@ -13,7 +13,7 @@ require_once('Sort.php');
 */
 require_once('SortImage.php');
 /**
-* Класс CutImage - Разрезание фото для поиска QR
+* Класс ScanImg - Разрезание фото для поиска QR
 */
 require_once('ScanImg.php');
 /**
@@ -21,7 +21,5 @@ require_once('ScanImg.php');
 */
 require_once('Logger.php');
 
-echo 'Сортировка фото</br></br>';
-
-$s1 = SortImage::getInstance('photo');
+$s1 = SortImage::getInstance();
 $s1->sorting();

@@ -3,14 +3,13 @@ namespace sort;
 
 Class SortImage extends Sort
 {
-	const SORTING = true;
-	const FREE = false;
 
   protected $env = '';
 
-	private $state = '';
-	private $logMess = [];
   public $logger = '';
+  public $struct = '/([\s\S][^\/]+)\/([\s\S][^\/]+)\/([\s\S][^\/]+)/i';
+
+  public $result = [];
 
 	public function __construct() {
 		parent::__construct();
@@ -19,42 +18,126 @@ Class SortImage extends Sort
 
   public function sorting()
   {
+    /**
+    * Получаем каталог, где находятся файлы для сортировки
+    */
+  	$dir = $this->getDirNotSort();
 
-  	$folders = $this->getFolder();
+    if ( !file_exists( $dir ) )
+    {
+      $this->logger->mess('Отсутствует корневой каталог', $this->getDirNotSort());
+    } else
+    {
+      /**
+      * Рекурсивно получаем список путей каталогов, в которых есть файлы
+      */
+      $this->recursScan( $dir );
+    }
+    /**
+    * Удаляем повторяющиеся пути
+    */
+    $this->result = array_unique($this->result);
+    /**
+    * Проходим все каталоги в цикле
+    */
+    foreach ($this->result as $path) {
 
-  	$this->showPath();
+      if( preg_match( $this->struct, $path, $match) ){
+        /**
+        * $doctype - тип документа, участвует в создании иерархии каталогов
+        * $user - временно не используется
+        */
+        $doctype = $match[2];
+        $user = $match[3];
+        /**
+        * $imgs - Отбираются все файлы, типа image/png || jpeg || jpg из каталога
+        */
+        $imgs = $this->getAllImg($path);
+        /**
+        * $docs - Возвращается массив из правильных наборов изображений [QR начала документа - изображения - QR конца документа]
+        */
+        $docs = $this->chekImage($imgs, $path);
 
-  	foreach ($folders as $folder) {
-  		//Получаем все фото из папки
-  		$imgs = $this->getAllImg($folder);
-  		//Запускаем сортировку и перемещение для данной папки
-  		$this->chekImage($imgs, $folder);
-  	}
+        foreach ($docs as $key => $doc) {
+          /**
+          * $params - расшифрованный текст из QR.
+          */
+          $params = explode(',', $key);
+          /**
+          * На данный момент заложено 4 параметра
+          */
+          if( count($params) != 4 )
+          {
+            $this->logger->mess('Файлы не перемещны. Невалидный QR. Пример текста для QR: id объекта,Установка,Трубопроводы,позиция' , $doc);
+            continue;
+          }
+
+          $ust = $params[1];
+          $class = $params[2]; 
+          $index = $params[3];
+          /**
+          * $newPath - новый путь расположения изображений
+          */
+          $newPath = $this->getDirSort() . '/' . $ust . '/' . $doctype . '/' . $class . '/' . $index;
+          /**
+          * $movingImg - перемещение изображений в новый каталог
+          */
+          $this->movingImg( $doc, $newPath, $path);
+          $this->logger->mess('Файлы перемещены' , $doc);
+
+        }
+      }
+    }
 
   }
   /**
   * Перемещение файлов
   */
-  protected function movingImg( $filesArr, $text, $folder )
+  protected function movingImg( $files, $newPath, $path )
   {
-    $dir = $text;
-    if ( !file_exists($dir) )
+    if ( !file_exists($newPath) )
     {
-      mkdir($dir, 0777, true);
+      mkdir($newPath, 0777, true);
     }
 
-    foreach ($filesArr as $file) {
-      # code...
-      rename($folder . '/' . $file, $text . '/' . $file);
+    foreach ($files as $file) {
+      rename($path . '/' . $file, $newPath . '/' . $file);
+    }
+
+  }
+
+  /**
+  * Рекурсивно совершает обход каталогов относительно каталога в аргументе $dir
+  */
+  protected function recursScan( $dir )
+  {
+    if(is_dir($dir))
+    {
+      $files = scandir($dir);
+      foreach ($files as $file) 
+      {
+        if( $file == '.' || $file == '..' )
+          continue;
+
+        $file = $dir.'/'.$file;
+        $this->recursScan( $file );
+      } 
+    }else 
+    {
+      $offset = strripos($dir, '/');
+
+      $dir = substr($dir, 0, $offset);
+
+      return $this->result[] = $dir;
     }
 
   }
  	/**
-  * Сканирование изображений, возвращает наборы файлов, которые нужно переместить
+  * Проверка и сканирование изображений, возвращает наборы файлов, которые нужно переместить
   */
   protected function chekImage( $files, $folder )
   {
-
+    $result = [];
   	$notSort = [];
   	$Sort = [];
   	$QRfirst = '';
@@ -94,15 +177,14 @@ Class SortImage extends Sort
 				if( $QRfirst === $text )
 				{
 					//Определяем как конец паспорта
+          
 					$Sort[] = $file;
-
-					//переносим все изображения в новую директорию
-          //$this->movingImg( $Sort, $text, $folder);
-
-					$this->logger->mess('Файлы успешно перенесены' , $Sort);
+          
+          $result[$QRfirst] = $Sort;
 					//Обнуляем массив Sort
-
+          $QRfirst = '';
 					$Sort = [];
+
 				} else {
 
 					//QR код от другого паспорта. Все вышеперечисленные файлы вносим в notSort
@@ -130,6 +212,7 @@ Class SortImage extends Sort
 
     }
 
+    return $result;
   }
  	/**
   * Получение всех изображений из указанной директории
@@ -137,7 +220,6 @@ Class SortImage extends Sort
   protected function getAllImg( $dir )
   {
   	$result = [];
-  	$notSort = [];
 
   	if( is_dir( $dir ) )
   	{
@@ -152,7 +234,7 @@ Class SortImage extends Sort
 	  		//В финальный массив должны быть добавены только изображения png или jpeg
 	  		$mime = mime_content_type($dir . '/' . $img);
 
-	  		if( preg_match('/image\/png|image\/jpeg/i', $mime) !== 1 ) 
+	  		if( preg_match('/image\/png|image\/jpeg|image\/jpg/i', $mime) !== 1 ) 
 	  		{
 	  			$notSort[] = $dir.'/'.$img;
 	  			continue;
